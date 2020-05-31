@@ -1,0 +1,29 @@
+image: "/assets/exp2_0.png"
+tile_width: 64
+tile_height: 64
+tile_margin: 0
+tile_spacing: 0
+collision: ""
+material_tag: "tile"
+collision_groups: "default"
+animations {
+  id: "explodeDown"
+  start_tile: 1
+  end_tile: 16
+  playback: PLAYBACK_ONCE_FORWARD
+  fps: 24
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "explodeUp"
+  start_tile: 1
+  end_tile: 16
+  playback: PLAYBACK_ONCE_BACKWARD
+  fps: 24
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+extrude_borders: 2
+inner_padding: 0
+sprite_trim_mode: SPRITE_TRIM_MODE_OFF

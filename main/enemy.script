@@ -1,0 +1,152 @@
+function init(self)
+	msg.post("#explode", "disable")
+
+	go.set("#explode", "scale.y", 10)
+	go.set("#explode", "scale.x", 10)
+	go.set_parent(hash("/background"))
+
+	self.am_assplode = false
+	self.refire_timer = 0
+	self.player_lasers = {}
+	self.desired_x = 500
+	self.dodging = false
+end
+
+function update(self, dt)
+	if self.am_assplode then return end
+	if self.refire_timer > 0 then
+		self.refire_timer = self.refire_timer - dt
+	end
+	local my_pos = go.get_position()
+	if self.dodging and self.desired_x+5 >= my_pos.x and self.desired_x-5 <= my_pos.x then
+		self.dodging = false
+	end
+	if my_pos.x > self.desired_x then
+		msg.post("#collisionobject", "apply_force",
+		{force = vmath.vector3(-400, 0, 0), position = go.get_world_position()})
+	elseif my_pos.x < self.desired_x then
+		msg.post("#collisionobject", "apply_force",
+		{force = vmath.vector3(400, 0, 0), position = go.get_world_position()})
+	end
+	local player_pos = go.get_position("/player")
+	local pos_diff = player_pos.x - my_pos.x
+	if pos_diff > -10 and pos_diff < 10 and self.refire_timer <= 0 then
+		local pos = go.get_world_position()
+		factory.create("#enemylaser_factory", vmath.vector3(pos.x, pos.y-50, pos.z))
+		self.refire_timer = 0.3
+	end
+	local danger = false
+	local closest_safe_x = my_pos.x
+	local xs = {}
+	for k in pairs(self.player_lasers) do
+		local pos = go.get_position(k)
+		if pos.y > 1000 then
+			self.player_lasers[k] = nil
+			go.delete(k)
+		else
+			table.insert(xs, pos.x)
+			if pos.x+20 >= my_pos.x or pos.x-20 <= my_pos.x then
+				danger = true
+			end
+		end
+	end
+	local function is_safe(test_pos)
+		if test_pos > 1000 or test_pos < 0 then return false end
+		for _, x in ipairs(xs) do
+			if x+20 <= my_pos.x and x-20 >= my_pos.x then
+				return false
+			end
+		end
+		return true
+	end
+	if danger then
+		self.dodging = true
+		table.sort(xs)
+		local r = math.random(2)
+		if r == 1 and is_safe(my_pos.x-120) then
+			self.desired_x = my_pos.x-120
+			return
+		elseif r == 2 and is_safe(my_pos.x+120) then
+			self.desired_x = my_pos.x+120
+			return
+		else
+			local lcount, rcount = 0, 0
+			for _, x in ipairs(xs) do
+				if x < my_pos.x then
+					lcount = lcount + 1
+				else
+					rcount = rcount + 1
+				end
+			end
+			if lcount > rcount then
+				for i = my_pos.x+40, 1000, 20 do
+					if is_safe(i) then
+						self.desired_x = i
+						return
+					end
+				end
+			else
+				for i = my_pos.x-40, 0, -20 do
+					if is_safe(i) then
+						self.desired_x = i
+						return
+					end
+				end
+			end
+			-- XXX: copypasta
+			if lcount < rcount then
+				for i = my_pos.x+40, 1000, 20 do
+					if is_safe(i) then
+						self.desired_x = i
+						return
+					end
+				end
+			else
+				for i = my_pos.x-40, 0, -20 do
+					if is_safe(i) then
+						self.desired_x = i
+						return
+					end
+				end
+			end
+			print("FAIL- no course")
+			-- PANIC
+			if self.refire_timer <= 0 then
+				factory.create("#enemylaser_factory", vmath.vector3(my_pos.x, my_pos.y-50, my_pos.z))
+				self.refire_timer = 0.3
+			end
+			return
+		end
+	else
+		-- If we don't plan dodge chase player
+		if not self.dodging and is_safe(player_pos.x) then
+			self.desired_x = player_pos.x
+		end
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("collision_response") then
+		if message.other_group == hash("laser") and not self.am_assplode then
+			self.am_assplode = true
+			msg.post("#explode", "enable")
+			msg.post("#explode", "play_animation", {id = hash("explodeUp")})
+		end
+	elseif message_id == hash("animation_done") then
+		if message.id == hash("explodeUp") then
+			msg.post("#sprite", "disable")
+			msg.post("#explode", "play_animation", {id = hash("explodeDown")})
+		elseif message.id == hash("explodeDown") then
+			msg.post("#explode", "disable")
+			self.am_assplode = false
+			msg.post("#collisionobject", "disable")
+			go.set_position(vmath.vector3(500, 940, 0))
+			go.set_rotation(vmath.quat(0, 0, 0, 0))
+			self.desired_x = 500
+			msg.post("#sprite", "enable")
+			msg.post("#collisionobject", "enable")
+		end
+	elseif message_id == hash("laser") then
+		self.player_lasers[sender] = true
+	end
+end

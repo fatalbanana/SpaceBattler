@@ -1,0 +1,11 @@
+function init(self)
+	self.vel = vmath.vector3(0, 1000, 0)
+	local pos = go.get_position()
+	msg.post("/enemy", "laser")
+end
+
+function update(self, dt)
+	local pos = go.get_position()
+	pos = pos + self.vel * dt
+	go.set_position(pos)
+end

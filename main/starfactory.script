@@ -1,0 +1,5 @@
+function init(self)
+	for i = 0, 100, 1 do
+		factory.create("#factory", vmath.vector3(math.random(1000), math.random(1000), -1))
+	end
+end

@@ -1,0 +1,53 @@
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	physics.set_gravity(vmath.vector3(0, 0, 0))
+	msg.post("#explode", "disable")
+
+	go.set("#explode", "scale.y", 10)
+	go.set("#explode", "scale.x", 10)
+	go.set_parent(hash("/background"))
+
+	self.am_assplode = false
+end
+
+function on_input(self, action_id, action)
+	if not action_id then return end
+	if action_id == hash("left") then
+		msg.post("#collisionobject", "apply_force",
+		{force = vmath.vector3(-200, 0, 0), position = go.get_world_position()})
+	elseif action_id == hash("right") then
+		msg.post("#collisionobject", "apply_force",
+		{force = vmath.vector3(200, 0, 0), position = go.get_world_position()})
+	elseif action_id == hash("space") and action.pressed and not self.am_assplode then
+		local pos = go.get_world_position()
+		factory.create("#laser_factory", vmath.vector3(pos.x, pos.y+50, pos.z))
+	elseif action_id == hash("escape") then
+		msg.post("@system:", "exit", {code = 0})
+	elseif action_id == hash("touch") then
+		msg.post("@system:", "toggle_physics_debug")
+	end
+end
+
+-- XXX: [mostly] copypasta from enemy
+function on_message(self, message_id, message, sender)
+	if message_id == hash("collision_response") then
+		if message.other_group == hash("laser") and not self.am_assplode then
+			self.am_assplode = true
+			msg.post("#explode", "enable")
+			msg.post("#explode", "play_animation", {id = hash("explodeUp")})
+		end
+	elseif message_id == hash("animation_done") then
+		if message.id == hash("explodeUp") then
+			msg.post("#sprite", "disable")
+			msg.post("#explode", "play_animation", {id = hash("explodeDown")})
+		elseif message.id == hash("explodeDown") then
+			msg.post("#explode", "disable")
+			self.am_assplode = false
+			msg.post("#collisionobject", "disable")
+			go.set_position(vmath.vector3(500, 45, 0))
+			go.set_rotation(vmath.quat(0, 0, 0, 0))
+			msg.post("#sprite", "enable")
+			msg.post("#collisionobject", "enable")
+		end
+	end
+end

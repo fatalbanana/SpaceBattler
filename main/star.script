@@ -1,0 +1,31 @@
+local TWINKLE = hash("twinkle")
+
+local shades = {
+	hash("white"),
+	hash("lightgrey"),
+	hash("grey"),
+	hash("darkgrey"),
+}
+
+function init(self)
+	self.vel = vmath.vector3(math.random(1, 5) * 0.001, 0, 0)
+	local choice = math.random(#shades)
+	self.orig_shade = shades[choice]
+	msg.post(".", "play_animation", {id = self.orig_shade})
+	self.twinkle_interval = math.random(3000, 15000) * 0.001
+	self.elapsed = 0
+end
+
+function update(self, dt)
+	local pos = go.get_position()
+	if pos.x > 1000 then
+		pos.x = 0
+	end
+	pos = pos + self.vel * dt
+	go.set_position(pos)
+	self.elapsed = self.elapsed + dt
+	if self.elapsed >= self.twinkle_interval then
+		self.elapsed = 0
+		msg.post(".", "play_animation", {id = TWINKLE})
+	end
+end

@@ -1,0 +1,13 @@
+function init(self)
+	self.vel = vmath.vector3(0, -1000, 0)
+end
+
+function update(self, dt)
+	local pos = go.get_position()
+	if pos.y < 0 then
+		go.delete()
+		return
+	end
+	pos = pos + self.vel * dt
+	go.set_position(pos)
+end
